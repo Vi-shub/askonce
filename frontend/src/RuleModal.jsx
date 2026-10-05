@@ -7,6 +7,7 @@ export default function RuleModal({ r }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="kicker" style={{ color: "#c45c26" }}>
           Missing rule
+          {modal.proposal.used_gemini ? " · Gemini" : ""}
         </div>
         <h2>
           {modal.proposal.unexplained

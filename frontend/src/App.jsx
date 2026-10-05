@@ -10,7 +10,7 @@ function initialLayout() {
   if (hash === "split") return "split";
   if (window.matchMedia("(display-mode: standalone)").matches) return "phone";
   if (window.innerWidth < 820) return "phone";
-  return "desk";
+  return "split";
 }
 
 export default function App() {

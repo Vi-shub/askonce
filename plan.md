@@ -71,32 +71,27 @@ Payroll, HRIS, 12 industries, App Store / Play Store, React Native, a second ros
 
 ### 5–6 Oct — lock the loop
 
+- [x] Demo setup pins Priya on Saturday night (Start demo)
+- [x] Callout lights the phone in **Side by side** (default layout)
+- [x] Yamada refuse is human, not `INFEASIBLE`
 - [ ] Put `GEMINI_API_KEY` in `backend/.env`
-- [ ] Run Priya Saturday demo twice without touching the code
-- [ ] Confirm the learned rule actually empties the next Saturday
-- [ ] Confirm callout lights the phone in **Side by side**
-- [ ] Confirm Yamada refuse is human, not `INFEASIBLE`
-- [ ] **Second teammate named and registered by 11 Oct** (do this now, not on the 10th)
-
-If day 6 the Priya loop still flakes, **stop all other work** until it doesn’t.
+- [ ] **Second teammate named and registered by 11 Oct**
 
 ### 7–8 Oct — Gemini must be visible
 
-- [ ] Override question copy comes from Gemini, not only the heuristic
-- [ ] Infeasibility summary from Gemini (two legal choices, no jargon)
-- [ ] Voice box: “Priya can’t do Saturday nights while mum is in hospital” → same modal
-- [ ] Provenance on every rule: who, when, why, which override
-- [ ] Short “why Gemini” note in README (structured output + tool-ish call to solver)
+- [x] Override question uses Gemini structured JSON when a key is present
+- [x] Infeasibility summary from Gemini
+- [x] Voice box parses into the same modal
+- [x] Provenance on every rule: who, when, which override
+- [x] “Why Gemini” note in README
 
 ### 9–10 Oct — deploy (required)
 
-Submissions need a **live Cloud Run or Firebase** URL.
-
-- [ ] Backend → Cloud Run
-- [ ] Frontend → Firebase Hosting (or Cloud Run static)
-- [ ] Secrets in Secret Manager, not in Git
-- [ ] CORS locked to the real frontend origin
-- [ ] Public GitHub repo, English README, `python` / `npm` setup still works
+- [x] One Cloud Run image (API + UI) — `Dockerfile` + `deploy.md`
+- [ ] `gcloud run deploy` with a real project (needs your GCP account)
+- [x] Secret is env/Secret Manager, not Git
+- [ ] Paste live URL into README after deploy
+- [ ] Public GitHub repo
 
 ### 11 Oct — team formation deadline
 

@@ -1,4 +1,4 @@
-import { cellOf } from "./api.js";
+import { cellOf, cellTaught } from "./api.js";
 
 export default function Desk({ r }) {
   const {
@@ -19,6 +19,8 @@ export default function Desk({ r }) {
     demoCallout,
     illegalYamadaNight,
     sendVoice,
+    startDemo,
+    gemini,
   } = r;
 
   return (
@@ -28,6 +30,7 @@ export default function Desk({ r }) {
         <h1 className="pitch">{ward.pitch}</h1>
         <p className="mono" style={{ color: "#cfc3ab", fontSize: 12 }}>
           {ward.ward.hospital} · {ward.num_days}-day horizon
+          {gemini ? " · Gemini on" : " · heuristic (add GEMINI_API_KEY)"}
         </p>
         <ul className="policy">
           {ward.ward.policy.map((p) => (
@@ -54,8 +57,11 @@ export default function Desk({ r }) {
 
       <main className="main">
         <div className="toolbar">
-          <button className="primary" disabled={busy} onClick={generate}>
-            {roster ? "Re-solve" : "Generate roster"}
+          <button className="primary" disabled={busy} onClick={startDemo}>
+            Start demo
+          </button>
+          <button className="ghost" disabled={busy} onClick={generate}>
+            Re-solve
           </button>
           <button className="ghost" disabled={busy || !roster} onClick={demoPriya}>
             Demo: Priya off Saturday
@@ -108,12 +114,13 @@ export default function Desk({ r }) {
                   </td>
                   {ward.days.map((d) => {
                     const shift = cellOf(roster, n.id, d.index) || "off";
+                    const taught = cellTaught(rules, n.id, d.index, d.weekday);
                     return (
                       <td key={d.index}>
                         <div
-                          className={`cell ${shift}`}
+                          className={`cell ${shift}${taught ? " taught" : ""}`}
                           onClick={() => takeOff(n, d.index, shift)}
-                          title="Take off this shift"
+                          title={taught ? "Taught rule" : "Take off this shift"}
                         >
                           {shift === "off" ? "—" : shift}
                         </div>
@@ -152,8 +159,12 @@ export default function Desk({ r }) {
           <div className="rule" key={rule.id}>
             <div>{rule.reason}</div>
             <div className="who mono">
-              {rule.taught_by} · {rule.scope} · {rule.kind}
+              {rule.taught_by} · {rule.scope}
+              {rule.taught_at ? ` · ${rule.taught_at.slice(0, 16).replace("T", " ")}` : ""}
             </div>
+            {rule.source_override && (
+              <div className="who mono">from {rule.source_override}</div>
+            )}
           </div>
         ))}
 

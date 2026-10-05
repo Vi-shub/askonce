@@ -71,6 +71,7 @@ class ProposedRule(BaseModel):
     draft: LearnedConstraint
     unexplained: bool
     why_unexplained: str
+    used_gemini: bool = False
 
 
 class CalloutRequest(BaseModel):

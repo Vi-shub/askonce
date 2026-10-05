@@ -24,9 +24,11 @@ def weekday_name(day_index: int) -> str:
     return period_dates()[day_index].strftime("%a")
 
 
-def day_label(day_index: int) -> str:
-    d = period_dates()[day_index]
-    return f"{d.strftime('%a')} {d.day}"
+def first_index_for_weekday(weekday: int) -> int:
+    for i, d in enumerate(period_dates()):
+        if d.weekday() == weekday:
+            return i
+    return weekday
 
 
 def nurses() -> list[Nurse]:

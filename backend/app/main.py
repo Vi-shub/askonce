@@ -1,10 +1,21 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.gemini_agent import confirm_rule, explain_infeasible, propose_from_override
+from app import llm
+from app.gemini_agent import (
+    confirm_rule,
+    explain_infeasible,
+    parse_voice,
+    propose_from_override,
+)
 from app.models import (
     CalloutCandidate,
     CalloutRequest,
@@ -12,14 +23,28 @@ from app.models import (
     OverrideEvent,
     Roster,
 )
-from app.seed import NUM_DAYS, WARD, nurses, period_dates, weekday_name
+from app.seed import (
+    NUM_DAYS,
+    WARD,
+    first_index_for_weekday,
+    nurses,
+    period_dates,
+    weekday_name,
+)
 from app.solver import solve
-from app.store import add_rule, load_history, load_rules, nurse_map, record_cycle
+from app.store import (
+    add_rule,
+    load_history,
+    load_rules,
+    nurse_map,
+    record_cycle,
+    reset_demo_store,
+)
 
-app = FastAPI(title="Askonce", version="0.1.0")
+app = FastAPI(title="Askonce", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -42,6 +67,12 @@ class VoiceBody(BaseModel):
     manager: str = "Nurse Manager Sato"
 
 
+class ForceBody(BaseModel):
+    nurse_id: str
+    day_index: int = 0
+    shift: str = "night"
+
+
 def _dates():
     return [
         {
@@ -55,6 +86,13 @@ def _dates():
     ]
 
 
+def _payload_extra():
+    return {
+        "gemini": llm.gemini_ready(),
+        "pitch": "The roster that learns the rules nobody wrote down.",
+    }
+
+
 @app.get("/api/ward")
 def ward():
     return {
@@ -62,11 +100,34 @@ def ward():
         "nurses": [n.model_dump() for n in nurses()],
         "days": _dates(),
         "num_days": NUM_DAYS,
-        "pitch": "The roster that learns the rules nobody wrote down.",
         "rules": [r.model_dump() for r in load_rules()],
         "history": load_history(),
         "overrides_this_cycle": SESSION["overrides_this_cycle"],
         "roster": SESSION["roster"].model_dump() if SESSION["roster"] else None,
+        **_payload_extra(),
+    }
+
+
+@app.post("/api/demo/setup")
+def demo_setup():
+    """Reliable three-story demo: Priya on Sat night, Daniel on a weekday night."""
+    reset_demo_store()
+    SESSION["overrides_this_cycle"] = 0
+    sat = first_index_for_weekday(5)
+    tue = first_index_for_weekday(1)
+    result = solve([], locks=[("n04", sat, "night"), ("n06", tue, "night")])
+    if isinstance(result, Infeasibility):
+        result = solve([], locks=[("n04", sat, "night")])
+    if isinstance(result, Infeasibility):
+        result.summary = explain_infeasible(result.summary, result.conflicts)
+        return {"ok": False, "infeasible": result.model_dump()}
+    SESSION["roster"] = result
+    return {
+        "ok": True,
+        "roster": result.model_dump(),
+        "history": load_history(),
+        "rules": [],
+        **_payload_extra(),
     }
 
 
@@ -77,7 +138,7 @@ def generate():
         result.summary = explain_infeasible(result.summary, result.conflicts)
         return {"ok": False, "infeasible": result.model_dump()}
     SESSION["roster"] = result
-    return {"ok": True, "roster": result.model_dump()}
+    return {"ok": True, "roster": result.model_dump(), **_payload_extra()}
 
 
 @app.post("/api/override/propose")
@@ -174,49 +235,22 @@ def callout(req: CalloutRequest):
 
 @app.post("/api/voice-rule")
 def voice_rule(body: VoiceBody):
-    """Optional scoring extra: 'Priya can't do nights while mum is in hospital.'"""
-    text = body.text.lower()
-    target = None
-    for n in nurses():
-        first = n.name.split()[0].lower()
-        if first in text or n.id in text:
-            target = n
-            break
-    if target is None:
+    parsed = parse_voice(body.text, body.manager)
+    if parsed is None:
         return {"ok": False, "error": "Could not match a nurse in that sentence."}
-
-    # Build a synthetic Saturday-night style override from language.
-    from app.models import OverrideEvent as OE
-
-    shift = "night" if "night" in text else "day" if "day" in text else "evening"
-    # Prefer next matching weekday mentioned, else first Saturday.
-    day_index = 5  # first Saturday in the period starting Monday
-    for token, wd in [("saturday", 5), ("sunday", 6), ("friday", 4), ("monday", 0)]:
-        if token in text:
-            for i, d in enumerate(period_dates()):
-                if d.weekday() == wd:
-                    day_index = i
-                    break
-    ov = OE(
-        nurse_id=target.id,
-        day_index=day_index,
-        from_shift=shift,
-        to_shift="off",
-        manager=body.manager,
-    )
+    ov, reason = parsed
     proposal = propose_from_override(ov)
-    return {"ok": True, "override": ov.model_dump(), "proposal": proposal.model_dump()}
-
-
-class ForceBody(BaseModel):
-    nurse_id: str
-    day_index: int = 0
-    shift: str = "night"
+    return {
+        "ok": True,
+        "override": ov.model_dump(),
+        "proposal": proposal.model_dump(),
+        "suggested_reason": reason,
+        "used_gemini": proposal.used_gemini,
+    }
 
 
 @app.post("/api/force")
 def force_assign(body: ForceBody):
-    """Try an illegal pin (Yamada on nights) so refusal is the demo, not a crash."""
     result = solve(load_rules(), locks=[(body.nurse_id, body.day_index, body.shift)])
     if isinstance(result, Infeasibility):
         result.summary = explain_infeasible(result.summary, result.conflicts)
@@ -227,4 +261,32 @@ def force_assign(body: ForceBody):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "gemini": llm.gemini_ready()}
+
+
+def _static_dir() -> Path | None:
+    here = Path(__file__).resolve()
+    docker = here.parents[1] / "static"
+    local = here.parents[2] / "frontend" / "dist"
+    for candidate in (docker, local):
+        if (candidate / "index.html").exists():
+            return candidate
+    return None
+
+
+_STATIC = _static_dir()
+if _STATIC is not None:
+    assets = _STATIC / "assets"
+    if assets.exists():
+        app.mount("/assets", StaticFiles(directory=assets), name="assets")
+
+    @app.get("/")
+    def index():
+        return FileResponse(_STATIC / "index.html")
+
+    @app.get("/{full_path:path}")
+    def spa(full_path: str):
+        target = _STATIC / full_path
+        if target.exists() and target.is_file():
+            return FileResponse(target)
+        return FileResponse(_STATIC / "index.html")

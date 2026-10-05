@@ -1,0 +1,32 @@
+[
+  {
+    "cycle": "Week \u22125",
+    "overrides": 18,
+    "rules_known": 6
+  },
+  {
+    "cycle": "Week \u22124",
+    "overrides": 16,
+    "rules_known": 6
+  },
+  {
+    "cycle": "Week \u22123",
+    "overrides": 15,
+    "rules_known": 7
+  },
+  {
+    "cycle": "Week \u22122",
+    "overrides": 14,
+    "rules_known": 7
+  },
+  {
+    "cycle": "Week \u22121",
+    "overrides": 13,
+    "rules_known": 8
+  },
+  {
+    "cycle": "Week 1",
+    "overrides": 1,
+    "rules_known": 1
+  }
+]

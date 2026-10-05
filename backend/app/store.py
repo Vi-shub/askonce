@@ -62,5 +62,17 @@ def record_cycle(overrides: int, rules_known: int) -> list[dict]:
     return history
 
 
+def reset_demo_store() -> None:
+    save_rules([])
+    seeded = [
+        {"cycle": "Week −5", "overrides": 18, "rules_known": 6},
+        {"cycle": "Week −4", "overrides": 16, "rules_known": 6},
+        {"cycle": "Week −3", "overrides": 15, "rules_known": 7},
+        {"cycle": "Week −2", "overrides": 14, "rules_known": 7},
+        {"cycle": "Week −1", "overrides": 13, "rules_known": 8},
+    ]
+    HISTORY_PATH.write_text(json.dumps(seeded, indent=2), encoding="utf-8")
+
+
 def nurse_map() -> dict:
     return {n.id: n for n in nurses()}

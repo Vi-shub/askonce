@@ -10,7 +10,7 @@ export default function Phone({ r, framed = true }) {
     calloutPulse,
     voice,
     setVoice,
-    generate,
+    startDemo,
     demoPriya,
     demoCallout,
     sendVoice,
@@ -96,8 +96,8 @@ export default function Phone({ r, framed = true }) {
               : "No roster yet."}
           </p>
           <div className="phone-actions">
-            <button className="primary" disabled={busy} onClick={generate}>
-              {roster ? "Re-solve" : "Generate"}
+            <button className="primary" disabled={busy} onClick={startDemo}>
+              {roster ? "Reset demo" : "Start demo"}
             </button>
             <button className="ghost" disabled={busy || !roster} onClick={demoCallout}>
               Send 23:10 ping

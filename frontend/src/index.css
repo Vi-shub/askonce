@@ -194,6 +194,9 @@ td.name small {
   color: #8a8274;
   cursor: default;
 }
+.cell.taught {
+  outline: 2px solid #e7b07a inset;
+}
 .cell.legal {
   outline: 2px solid #c45c26 inset;
 }

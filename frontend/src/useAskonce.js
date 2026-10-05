@@ -14,6 +14,7 @@ export function useAskonce() {
   const [infeasible, setInfeasible] = useState(null);
   const [picked, setPicked] = useState(null);
   const [calloutPulse, setCalloutPulse] = useState(0);
+  const [gemini, setGemini] = useState(false);
   const [voice, setVoice] = useState(
     "Priya can't do Saturday nights — family dinner every week."
   );
@@ -24,6 +25,7 @@ export function useAskonce() {
     setRoster(data.roster);
     setRules(data.rules || []);
     setHistory(data.history || []);
+    setGemini(Boolean(data.gemini));
   }
 
   useEffect(() => {
@@ -31,6 +33,27 @@ export function useAskonce() {
   }, []);
 
   const maxBar = Math.max(1, ...history.map((h) => h.overrides || 0));
+
+  async function startDemo() {
+    setBusy(true);
+    setInfeasible(null);
+    setToast("");
+    setPicked(null);
+    try {
+      const res = await api("/api/demo/setup", { method: "POST" });
+      if (!res.ok) {
+        setInfeasible(res.infeasible);
+        return;
+      }
+      setRoster(res.roster);
+      setRules(res.rules || []);
+      setHistory(res.history || []);
+      setGemini(Boolean(res.gemini));
+      setToast("Demo ward ready. Priya is on Saturday night — that's the training signal.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function generate() {
     setBusy(true);
@@ -66,7 +89,11 @@ export function useAskonce() {
       });
       setModal({ ov, proposal, nurse });
       setOptionId("permanent_weekday");
-      setReason("");
+      setReason(
+        nurse.id === "n04" && fromShift === "night"
+          ? "family dinner every Saturday"
+          : ""
+      );
     } finally {
       setBusy(false);
     }
@@ -187,6 +214,8 @@ export function useAskonce() {
       }
       const nurse = ward.nurses.find((n) => n.id === res.override.nurse_id);
       setModal({ ov: res.override, proposal: res.proposal, nurse });
+      setOptionId("permanent_weekday");
+      setReason(res.suggested_reason || voice);
     } finally {
       setBusy(false);
     }
@@ -208,10 +237,12 @@ export function useAskonce() {
     infeasible,
     picked,
     calloutPulse,
+    gemini,
     voice,
     setVoice,
     maxBar,
     generate,
+    startDemo,
     takeOff,
     confirm,
     demoPriya,
