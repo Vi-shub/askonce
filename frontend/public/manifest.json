@@ -1,0 +1,17 @@
+{
+  "name": "Askonce",
+  "short_name": "Askonce",
+  "description": "The roster that learns the rules nobody wrote down.",
+  "start_url": "/#phone",
+  "display": "standalone",
+  "background_color": "#14110e",
+  "theme_color": "#c45c26",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
